@@ -30,6 +30,7 @@ export interface Client {
 export type DocumentStatus =
   | 'pending'
   | 'client_signed'
+  | 'processing'
   | 'completed'
   | 'expired'
   | 'cancelled'

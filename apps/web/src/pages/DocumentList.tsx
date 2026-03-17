@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FileText, Plus, Search, Filter, ArrowRight, Clock, Copy, Check } from 'lucide-react'
+import { FileText, Plus, Search, ArrowRight, Copy, Check } from 'lucide-react'
 import { documentsService } from '@/services/documents.service'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import type { Document, DocumentStatus, PaginatedResponse } from '@/types'
 
 const STATUS_FILTERS: { label: string; value: DocumentStatus | '' }[] = [

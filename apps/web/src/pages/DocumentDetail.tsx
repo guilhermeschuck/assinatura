@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  ArrowLeft, FileText, Download, PenLine, Copy, Check, RotateCcw, XCircle,
+  ArrowLeft, FileText, Download, PenLine, Copy, Check, XCircle,
   MapPin, Globe, Clock, User, Shield, Hash, Camera, Loader2, Send
 } from 'lucide-react'
 import { documentsService } from '@/services/documents.service'
@@ -13,8 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import type { Document, Signature } from '@/types'
 
 export default function DocumentDetail() {
-  const { id }     = useParams<{ id: string }>()
-  const navigate   = useNavigate()
+  const { id } = useParams<{ id: string }>()
 
   const [doc, setDoc]             = useState<Document | null>(null)
   const [loading, setLoading]     = useState(true)

@@ -1,25 +1,29 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, ShieldCheck, LogOut } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, ShieldCheck, LogOut, UserCog } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { authService } from '@/services/auth.service'
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/documents',  icon: FileText,        label: 'Documentos' },
-  { to: '/clients',    icon: Users,           label: 'Clientes' },
-  { to: '/settings/certificate', icon: ShieldCheck, label: 'Certificado A1' },
+  { to: '/dashboard',            icon: LayoutDashboard, label: 'Dashboard',     adminOnly: false },
+  { to: '/documents',            icon: FileText,        label: 'Documentos',    adminOnly: false },
+  { to: '/clients',              icon: Users,           label: 'Clientes',      adminOnly: false },
+  { to: '/team',                 icon: UserCog,         label: 'Equipe',        adminOnly: true  },
+  { to: '/settings/certificate', icon: ShieldCheck,     label: 'Certificado A1', adminOnly: false },
 ]
 
 export function Sidebar() {
   const logout   = useAuthStore(s => s.logout)
   const user     = useAuthStore(s => s.user)
   const navigate = useNavigate()
+  const isAdmin  = user?.role === 'admin'
 
   const handleLogout = async () => {
     try { await authService.logout() } catch { /* ignora */ }
     logout()
     navigate('/login')
   }
+
+  const visibleItems = navItems.filter(item => !item.adminOnly || isAdmin)
 
   return (
     <aside className="w-64 min-h-screen bg-[#1B2E4B] flex flex-col">
@@ -40,7 +44,7 @@ export function Sidebar() {
 
       {/* Navegação */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        {visibleItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

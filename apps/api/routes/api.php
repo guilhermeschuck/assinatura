@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PublicSignController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // ---------------------------------------------------------------------------
@@ -56,4 +57,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/certificates', [CertificateController::class, 'index']);
     Route::post('/certificates', [CertificateController::class, 'store']);
     Route::delete('/certificates/{certificate}', [CertificateController::class, 'destroy']);
+
+    // Equipe (apenas admin)
+    Route::get('/team', [UserController::class, 'index']);
+    Route::post('/team', [UserController::class, 'store']);
+    Route::put('/team/{user}', [UserController::class, 'update']);
+    Route::delete('/team/{user}', [UserController::class, 'destroy']);
+    Route::post('/team/{user}/reset-password', [UserController::class, 'resetPassword']);
 });

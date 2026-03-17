@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Upload, FileText, UserPlus, Users, X, Loader2 } from 'lucide-react'
-import { useForm, Controller } from 'react-hook-form'
+import { ArrowLeft, Upload, FileText, UserPlus, Users, X } from 'lucide-react'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { documentsService } from '@/services/documents.service'
@@ -37,7 +36,7 @@ export default function NewDocument() {
   const [dragOver, setDragOver] = useState(false)
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<Form>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: { mode: 'new', expiration_days: 7 },
   })
 

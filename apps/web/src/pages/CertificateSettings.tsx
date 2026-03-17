@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Upload, X, AlertTriangle, CheckCircle2, Clock, Trash2, FileText, Loader2 } from 'lucide-react'
+import { ShieldCheck, Upload, X, CheckCircle2, Clock, Trash2, FileText, Loader2 } from 'lucide-react'
 import { certificatesService } from '@/services/certificates.service'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'

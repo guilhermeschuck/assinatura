@@ -10,16 +10,17 @@ const config: Record<AlertVariant, { icon: React.ElementType; classes: string }>
 }
 
 interface AlertProps {
-  variant?:  AlertVariant
-  title?:    string
-  children:  React.ReactNode
+  variant?:   AlertVariant
+  title?:     string
+  children:   React.ReactNode
+  className?: string
 }
 
-export function Alert({ variant = 'info', title, children }: AlertProps) {
+export function Alert({ variant = 'info', title, children, className = '' }: AlertProps) {
   const { icon: Icon, classes } = config[variant]
 
   return (
-    <div className={`flex gap-3 p-4 rounded-lg border ${classes}`}>
+    <div className={`flex gap-3 p-4 rounded-lg border ${classes} ${className}`}>
       <Icon size={18} className="mt-0.5 shrink-0" />
       <div className="flex-1 text-sm">
         {title && <p className="font-semibold mb-1">{title}</p>}

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Users, Plus, Search, Pencil, Trash2, FileText } from 'lucide-react'
+import { Users, Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import { clientsService } from '@/services/clients.service'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -84,7 +84,6 @@ export default function Clients() {
     }
   }
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR')
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
