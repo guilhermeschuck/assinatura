@@ -1,0 +1,36 @@
+version: '3.9'
+
+# Ambiente de desenvolvimento — apenas infraestrutura (PostgreSQL + Redis)
+# O Laravel e o React rodam diretamente na máquina local.
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   cd apps/api && php artisan serve
+#   cd apps/web && npm run dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: assinatura_db
+      POSTGRES_USER: assinatura
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"   # porta 5433 para não conflitar com PostgreSQL local
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assinatura -d assinatura_db"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

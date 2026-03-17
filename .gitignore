@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Laravel
+apps/api/vendor/
+apps/api/bootstrap/cache/*.php
+apps/api/storage/logs/*.log
+apps/api/storage/app/private/certificates/
+apps/api/node_modules/
+
+# React / Node
+apps/web/node_modules/
+apps/web/dist/
+
+# Certificates & private keys (NEVER commit)
+*.p12
+*.pfx
+*.pem
+*.key
+certificados*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude
+.claude/
+
+# Misc
+*.log
