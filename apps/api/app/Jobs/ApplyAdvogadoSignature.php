@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Signature;
 use App\Models\User;
 use App\Notifications\DocumentCompleted;
+use App\Services\ActivityService;
 use App\Services\PdfSignerService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -65,6 +66,14 @@ class ApplyAdvogadoSignature implements ShouldQueue
             'final_hash'       => $finalHash,
             'completed_at'     => now(),
         ]);
+
+        ActivityService::log(
+            action:      'document_completed',
+            description: "{$this->lawyer->name} assinou digitalmente (ICP-Brasil) o documento \"{$document->title}\" — processo concluído",
+            user:        $this->lawyer,
+            subject:     $document,
+            metadata:    ['certificate_id' => $certificate->id, 'final_hash' => $finalHash],
+        );
 
         // 5. Notifica ambas as partes
         $document->lawyer->notify(new DocumentCompleted($document, 'lawyer'));

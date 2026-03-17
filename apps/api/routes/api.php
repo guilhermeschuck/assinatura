@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\PublicSignController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -64,4 +66,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/team/{user}', [UserController::class, 'update']);
     Route::delete('/team/{user}', [UserController::class, 'destroy']);
     Route::post('/team/{user}/reset-password', [UserController::class, 'resetPassword']);
+
+    // Log de atividades (apenas admin)
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+
+    // Configurações (apenas admin)
+    Route::get('/settings', [SettingController::class, 'index']);
+    Route::put('/settings', [SettingController::class, 'update']);
 });

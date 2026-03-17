@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\ApplyAdvogadoSignature;
 use App\Models\Document;
 use App\Models\Signature;
+use App\Services\ActivityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -120,6 +121,14 @@ class PublicSignController extends Controller
 
         // Notifica o advogado
         $document->lawyer->notify(new \App\Notifications\ClientSignedDocument($document));
+
+        ActivityService::log(
+            action:      'client_signed',
+            description: "{$document->client->name} assinou eletronicamente o documento \"{$document->title}\" (IP: {$request->ip()})",
+            user:        null, // ação do cliente, sem conta no sistema
+            subject:     $document,
+            metadata:    ['client_name' => $document->client->name, 'client_email' => $document->client->email, 'ip' => $request->ip()],
+        );
 
         // Assinatura automática com Certificado A1 do advogado
         $lawyer      = $document->lawyer;

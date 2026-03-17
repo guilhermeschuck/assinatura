@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ActivityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -70,6 +71,13 @@ class UserController extends Controller
                 ->subject('Você foi adicionado ao sistema de assinaturas'),
         );
 
+        ActivityService::log(
+            action:      'user_invited',
+            description: "{$request->user()->name} adicionou {$user->name} ({$user->email}) como " . ($user->role === 'admin' ? 'Administrador' : 'Advogado'),
+            user:        $request->user(),
+            subject:     $user,
+        );
+
         return response()->json(['data' => $user], 201);
     }
 
@@ -100,8 +108,16 @@ class UserController extends Controller
         abort_if(! $request->user()->isAdmin(), 403, 'Apenas administradores podem remover membros.');
         abort_if($request->user()->id === $user->id, 422, 'Você não pode remover a sua própria conta.');
 
+        $removedName  = $user->name;
+        $removedEmail = $user->email;
         $user->tokens()->delete();
         $user->delete();
+
+        ActivityService::log(
+            action:      'user_removed',
+            description: "{$request->user()->name} removeu o membro {$removedName} ({$removedEmail}) da equipe",
+            user:        $request->user(),
+        );
 
         return response()->json(['message' => 'Membro removido com sucesso.']);
     }

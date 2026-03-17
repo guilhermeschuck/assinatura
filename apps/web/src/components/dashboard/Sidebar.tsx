@@ -1,13 +1,15 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, ShieldCheck, LogOut, UserCog } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, ShieldCheck, LogOut, UserCog, History, Settings } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { authService } from '@/services/auth.service'
 
 const navItems = [
-  { to: '/dashboard',            icon: LayoutDashboard, label: 'Dashboard',     adminOnly: false },
-  { to: '/documents',            icon: FileText,        label: 'Documentos',    adminOnly: false },
-  { to: '/clients',              icon: Users,           label: 'Clientes',      adminOnly: false },
-  { to: '/team',                 icon: UserCog,         label: 'Equipe',        adminOnly: true  },
+  { to: '/dashboard',            icon: LayoutDashboard, label: 'Dashboard',      adminOnly: false },
+  { to: '/documents',            icon: FileText,        label: 'Documentos',     adminOnly: false },
+  { to: '/clients',              icon: Users,           label: 'Clientes',       adminOnly: false },
+  { to: '/team',                 icon: UserCog,         label: 'Equipe',         adminOnly: true  },
+  { to: '/activity',             icon: History,         label: 'Atividades',     adminOnly: true  },
+  { to: '/settings',             icon: Settings,        label: 'Configurações',  adminOnly: true  },
   { to: '/settings/certificate', icon: ShieldCheck,     label: 'Certificado A1', adminOnly: false },
 ]
 

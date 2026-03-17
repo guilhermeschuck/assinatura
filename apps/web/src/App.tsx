@@ -12,6 +12,8 @@ const DocumentDetail      = lazy(() => import('@/pages/DocumentDetail'))
 const Clients             = lazy(() => import('@/pages/Clients'))
 const CertificateSettings = lazy(() => import('@/pages/CertificateSettings'))
 const Team                = lazy(() => import('@/pages/Team'))
+const ActivityLog         = lazy(() => import('@/pages/ActivityLog'))
+const Settings            = lazy(() => import('@/pages/Settings'))
 
 function PageLoader() {
   return (
@@ -38,6 +40,8 @@ export default function App() {
             <Route path="/documents/:id" element={<DocumentDetail />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/team" element={<Team />} />
+            <Route path="/activity" element={<ActivityLog />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/settings/certificate" element={<CertificateSettings />} />
           </Route>
 

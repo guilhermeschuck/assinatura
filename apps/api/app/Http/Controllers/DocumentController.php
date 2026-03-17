@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\SendSigningLink;
 use App\Models\Client;
 use App\Models\Document;
+use App\Services\ActivityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -86,6 +87,14 @@ class DocumentController extends Controller
 
             SendSigningLink::dispatch($document);
 
+            ActivityService::log(
+                action:      'document_created',
+                description: "{$request->user()->name} criou o documento \"{$document->title}\" e enviou o link para {$client->name} ({$client->email})",
+                user:        $request->user(),
+                subject:     $document,
+                metadata:    ['client_name' => $client->name, 'client_email' => $client->email, 'document_title' => $document->title],
+            );
+
             return response()->json(['data' => $document->load('client')], 201);
         });
     }
@@ -97,6 +106,13 @@ class DocumentController extends Controller
 
         $document->update(['status' => 'cancelled']);
 
+        ActivityService::log(
+            action:      'document_cancelled',
+            description: "{$request->user()->name} cancelou o documento \"{$document->title}\"",
+            user:        $request->user(),
+            subject:     $document,
+        );
+
         return response()->json(['data' => $document, 'message' => 'Documento cancelado.']);
     }
 
@@ -107,6 +123,13 @@ class DocumentController extends Controller
 
         $document->update(['expires_at' => now()->addDays(7)]);
         SendSigningLink::dispatch($document);
+
+        ActivityService::log(
+            action:      'link_resent',
+            description: "{$request->user()->name} reenviou o link de assinatura do documento \"{$document->title}\" para {$document->client->name}",
+            user:        $request->user(),
+            subject:     $document,
+        );
 
         return response()->json(['message' => 'Link reenviado com sucesso.']);
     }
