@@ -37,7 +37,11 @@ export default function Settings() {
 
   useEffect(() => {
     settingsService.get().then(res => {
-      setForm(f => ({ ...f, ...res.data.data }))
+      // Normaliza null → '' para evitar warnings de controlled inputs
+      const normalized = Object.fromEntries(
+        Object.entries(res.data.data).map(([k, v]) => [k, v ?? ''])
+      ) as typeof res.data.data
+      setForm(f => ({ ...f, ...normalized }))
     }).catch(() => {
       setError('Erro ao carregar configurações.')
     }).finally(() => setLoading(false))

@@ -25,7 +25,8 @@ class SettingController extends Controller
         abort_if(! $request->user()->isAdmin(), 403);
 
         $settings = Setting::whereIn('key', self::MAIL_KEYS)
-            ->pluck('value', 'key');
+            ->pluck('value', 'key')
+            ->map(fn ($v) => $v ?? ''); // nunca retorna null — inputs controlados precisam de string
 
         // Nunca expõe a senha preenchida
         if ($settings->has('mail_password') && filled($settings->get('mail_password'))) {
