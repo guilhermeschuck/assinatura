@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FileText, Plus, Search, ArrowRight, Copy, Check } from 'lucide-react'
 import { documentsService } from '@/services/documents.service'
+import { teamService, type TeamMember } from '@/services/team.service'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import type { Document, DocumentStatus, PaginatedResponse } from '@/types'
@@ -10,7 +11,6 @@ import type { Document, DocumentStatus, PaginatedResponse } from '@/types'
 const STATUS_FILTERS: { label: string; value: DocumentStatus | '' }[] = [
   { label: 'Todos',               value: '' },
   { label: 'Aguardando Cliente',  value: 'pending' },
-  { label: 'Aguardando Advogado', value: 'client_signed' },
   { label: 'Concluídos',          value: 'completed' },
   { label: 'Expirados',           value: 'expired' },
   { label: 'Cancelados',          value: 'cancelled' },
@@ -19,37 +19,57 @@ const STATUS_FILTERS: { label: string; value: DocumentStatus | '' }[] = [
 export default function DocumentList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialStatus = searchParams.get('status') || ''
+  const initialLawyerId = searchParams.get('lawyer_id') || ''
 
   const [documents, setDocs]   = useState<Document[]>([])
   const [loading, setLoading]  = useState(true)
   const [search, setSearch]    = useState('')
   const [status, setStatus]    = useState(initialStatus)
+  const [lawyerId, setLawyerId] = useState(initialLawyerId)
+  const [lawyers, setLawyers]  = useState<TeamMember[]>([])
   const [meta, setMeta]        = useState<PaginatedResponse<Document>['meta'] | null>(null)
   const [page, setPage]        = useState(1)
   const [copiedId, setCopied]  = useState<number | null>(null)
 
+  useEffect(() => {
+    teamService.list().then(res => setLawyers(res.data.data)).catch(() => {})
+  }, [])
+
   const loadDocuments = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await documentsService.list({ status: status || undefined, search: search || undefined, page })
+      const res = await documentsService.list({
+        status: status || undefined,
+        search: search || undefined,
+        lawyer_id: lawyerId ? Number(lawyerId) : undefined,
+        page,
+      })
       const data = res.data as any
       setDocs(data.data ?? [])
       setMeta(data.meta ?? null)
     } finally {
       setLoading(false)
     }
-  }, [status, search, page])
+  }, [status, search, lawyerId, page])
 
   useEffect(() => { loadDocuments() }, [loadDocuments])
 
   const handleFilterChange = (newStatus: string) => {
     setStatus(newStatus)
     setPage(1)
-    if (newStatus) {
-      setSearchParams({ status: newStatus })
-    } else {
-      setSearchParams({})
-    }
+    const params: Record<string, string> = {}
+    if (newStatus) params.status = newStatus
+    if (lawyerId) params.lawyer_id = lawyerId
+    setSearchParams(params)
+  }
+
+  const handleLawyerChange = (newLawyerId: string) => {
+    setLawyerId(newLawyerId)
+    setPage(1)
+    const params: Record<string, string> = {}
+    if (status) params.status = status
+    if (newLawyerId) params.lawyer_id = newLawyerId
+    setSearchParams(params)
   }
 
   const copyLink = (doc: Document) => {
@@ -63,9 +83,9 @@ export default function DocumentList() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>
             Documentos
@@ -108,6 +128,19 @@ export default function DocumentList() {
               </button>
             ))}
           </div>
+          {/* Filtro por advogado */}
+          {lawyers.length > 0 && (
+            <select
+              value={lawyerId}
+              onChange={e => handleLawyerChange(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-[#E2DDD5] text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2E4B] focus:border-transparent bg-white text-[#374151]"
+            >
+              <option value="">Todos os advogados</option>
+              {lawyers.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -149,7 +182,7 @@ export default function DocumentList() {
                   transition={{ delay: i * 0.03 }}
                   className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 hover:bg-[#FDFCF9] transition-colors items-center"
                 >
-                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                  <div className="md:col-span-4 flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 bg-[#F0EDE8] rounded-lg flex items-center justify-center shrink-0">
                       <FileText size={16} className="text-[#1B2E4B]" />
                     </div>
@@ -158,20 +191,22 @@ export default function DocumentList() {
                     </Link>
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="md:col-span-2 flex items-center gap-2 md:block">
+                    <span className="text-xs text-[#9CA3AF] md:hidden">Cliente:</span>
                     <p className="text-sm text-[#374151]">{doc.client?.name ?? '—'}</p>
-                    <p className="text-xs text-[#9CA3AF]">{doc.client?.cpf}</p>
+                    <p className="text-xs text-[#9CA3AF] hidden md:block">{doc.client?.cpf}</p>
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    <span className="text-xs text-[#9CA3AF] md:hidden">Status:</span>
                     <StatusBadge status={doc.status} />
                   </div>
 
-                  <div className="col-span-2">
+                  <div className="md:col-span-2 hidden md:block">
                     <p className="text-sm text-[#6B7280]">{formatDate(doc.created_at)}</p>
                   </div>
 
-                  <div className="col-span-2 flex items-center justify-end gap-2">
+                  <div className="md:col-span-2 flex items-center justify-end gap-2">
                     {doc.status === 'pending' && (
                       <button
                         onClick={() => copyLink(doc)}
@@ -194,9 +229,9 @@ export default function DocumentList() {
 
             {/* Paginação */}
             {meta && meta.last_page > 1 && (
-              <div className="px-6 py-4 border-t border-[#E2DDD5] flex items-center justify-between text-sm">
-                <p className="text-[#6B7280]">
-                  Mostrando {(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} de {meta.total}
+              <div className="px-4 sm:px-6 py-4 border-t border-[#E2DDD5] flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+                <p className="text-[#6B7280] text-center sm:text-left">
+                  {(meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} de {meta.total}
                 </p>
                 <div className="flex gap-2">
                   <Button

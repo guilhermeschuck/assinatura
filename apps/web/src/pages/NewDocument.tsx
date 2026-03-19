@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Upload, FileText, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, Upload, FileText, UserPlus, Users, X, Plus } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,8 +11,12 @@ import { Input } from '@/components/ui/Input'
 import { Alert } from '@/components/ui/Alert'
 import type { Client } from '@/types'
 
+interface PdfEntry {
+  file: File
+  title: string
+}
+
 const schema = z.object({
-  title:           z.string().min(1, 'Título obrigatório').max(255),
   expiration_days: z.coerce.number().int().min(1).max(90),
   mode:            z.enum(['existing', 'new']),
   client_id:       z.coerce.number().optional(),
@@ -30,10 +34,10 @@ type Form = z.infer<typeof schema>
 export default function NewDocument() {
   const navigate = useNavigate()
 
-  const [clients, setClients]   = useState<Client[]>([])
-  const [pdfFile, setPdfFile]   = useState<File | null>(null)
-  const [error, setError]       = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
+  const [clients, setClients]     = useState<Client[]>([])
+  const [pdfEntries, setPdfEntries] = useState<PdfEntry[]>([])
+  const [error, setError]         = useState<string | null>(null)
+  const [dragOver, setDragOver]   = useState(false)
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
@@ -48,25 +52,51 @@ export default function NewDocument() {
     })
   }, [])
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file?.type === 'application/pdf') {
-      setPdfFile(file)
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newEntries: PdfEntry[] = []
+    for (const file of Array.from(files)) {
+      if (file.type === 'application/pdf') {
+        const name = file.name.replace(/\.pdf$/i, '').replace(/[_-]/g, ' ')
+        newEntries.push({ file, title: name })
+      }
+    }
+    if (newEntries.length > 0) {
+      setPdfEntries(prev => [...prev, ...newEntries])
     }
   }, [])
 
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    addFiles(e.dataTransfer.files)
+  }, [addFiles])
+
+  const removeFile = useCallback((index: number) => {
+    setPdfEntries(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const updateTitle = useCallback((index: number, title: string) => {
+    setPdfEntries(prev => prev.map((entry, i) => i === index ? { ...entry, title } : entry))
+  }, [])
+
+  const isBatch = pdfEntries.length > 1
+
   const onSubmit = async (data: Form) => {
-    if (!pdfFile) {
-      setError('Selecione um arquivo PDF.')
+    if (pdfEntries.length === 0) {
+      setError('Selecione pelo menos um arquivo PDF.')
       return
     }
+
+    // Validar que todos os títulos estão preenchidos
+    const emptyTitle = pdfEntries.find(e => !e.title.trim())
+    if (emptyTitle) {
+      setError('Preencha o título de todos os documentos.')
+      return
+    }
+
     setError(null)
 
     const formData = new FormData()
-    formData.append('title', data.title)
-    formData.append('pdf_file', pdfFile)
     formData.append('expiration_days', String(data.expiration_days))
 
     if (data.mode === 'existing' && data.client_id) {
@@ -79,8 +109,28 @@ export default function NewDocument() {
     }
 
     try {
-      const res = await documentsService.create(formData)
-      navigate(`/documents/${(res.data as any).data.id}`)
+      if (isBatch) {
+        // Múltiplos documentos — endpoint batch
+        pdfEntries.forEach((entry, i) => {
+          formData.append('pdf_files[]', entry.file)
+          formData.append(`titles[${i}]`, entry.title)
+        })
+
+        const res = await documentsService.createBatch(formData)
+        const firstDoc = (res.data as any).data?.[0]
+        if (firstDoc) {
+          navigate(`/documents/${firstDoc.id}`)
+        } else {
+          navigate('/documents')
+        }
+      } else {
+        // Documento único — endpoint original
+        formData.append('title', pdfEntries[0].title)
+        formData.append('pdf_file', pdfEntries[0].file)
+
+        const res = await documentsService.create(formData)
+        navigate(`/documents/${(res.data as any).data.id}`)
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message
       const errs = err.response?.data?.errors
@@ -93,7 +143,7 @@ export default function NewDocument() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <Link to="/documents" className="inline-flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1B2E4B] mb-4 transition-colors">
         <ArrowLeft size={14} /> Voltar
       </Link>
@@ -107,7 +157,7 @@ export default function NewDocument() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Upload PDF */}
         <div className="bg-white rounded-xl border border-[#E2DDD5] shadow-sm p-6">
-          <h2 className="font-semibold text-[#1B2E4B] mb-4 flex items-center gap-2"><Upload size={16} /> Documento PDF</h2>
+          <h2 className="font-semibold text-[#1B2E4B] mb-4 flex items-center gap-2"><Upload size={16} /> Documento(s) PDF</h2>
 
           <div
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -119,43 +169,65 @@ export default function NewDocument() {
             ].join(' ')}
             onClick={() => document.getElementById('pdf-input')?.click()}
           >
-            {pdfFile ? (
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-                  <FileText size={20} className="text-[#0F7A5A]" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-[#1B2E4B]">{pdfFile.name}</p>
-                  <p className="text-xs text-[#6B7280]">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                </div>
-                <button type="button" onClick={e => { e.stopPropagation(); setPdfFile(null) }} className="ml-3 p-1 rounded-md hover:bg-red-50">
-                  <X size={16} className="text-red-500" />
-                </button>
-              </div>
-            ) : (
+            {pdfEntries.length === 0 ? (
               <>
                 <Upload size={32} className="text-[#C9A84C] mx-auto mb-3" />
-                <p className="font-medium text-[#1B2E4B] mb-1">Arraste um PDF aqui ou clique para selecionar</p>
-                <p className="text-xs text-[#6B7280]">Máximo 20 MB · Apenas arquivos .pdf</p>
+                <p className="font-medium text-[#1B2E4B] mb-1">Arraste PDF(s) aqui ou clique para selecionar</p>
+                <p className="text-xs text-[#6B7280]">Máximo 20 MB por arquivo · Apenas .pdf · Pode selecionar vários</p>
               </>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-sm text-[#6B7280]">
+                <Plus size={16} className="text-[#C9A84C]" />
+                <span>Adicionar mais PDFs</span>
+              </div>
             )}
             <input
               id="pdf-input"
               type="file"
               accept=".pdf"
+              multiple
               className="hidden"
-              onChange={e => { if (e.target.files?.[0]) setPdfFile(e.target.files[0]) }}
+              onChange={e => { if (e.target.files) { addFiles(e.target.files); e.target.value = '' } }}
             />
           </div>
+
+          {/* Lista de arquivos adicionados */}
+          {pdfEntries.length > 0 && (
+            <div className="mt-4 space-y-3">
+              {isBatch && (
+                <div className="flex items-center gap-2 text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-3 py-2">
+                  <FileText size={12} />
+                  <span><strong>{pdfEntries.length} documentos</strong> serão enviados em lote para o cliente assinar de uma vez.</span>
+                </div>
+              )}
+              {pdfEntries.map((entry, index) => (
+                <div key={index} className="flex items-start gap-3 bg-[#F8F7F4] rounded-lg p-3 border border-[#E2DDD5]">
+                  <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0 mt-1">
+                    <FileText size={16} className="text-[#0F7A5A]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-[#6B7280] mb-1 truncate">{entry.file.name} — {(entry.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <input
+                      type="text"
+                      value={entry.title}
+                      onChange={e => updateTitle(index, e.target.value)}
+                      placeholder="Título do documento"
+                      className="w-full px-2.5 py-1.5 rounded-md text-sm border border-[#E2DDD5] bg-white focus:outline-none focus:ring-2 focus:ring-[#1B2E4B]"
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeFile(index)} className="p-1 rounded-md hover:bg-red-50 shrink-0 mt-1">
+                    <X size={16} className="text-red-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Dados do documento */}
+        {/* Dados do documento (expiração) */}
         <div className="bg-white rounded-xl border border-[#E2DDD5] shadow-sm p-6">
-          <h2 className="font-semibold text-[#1B2E4B] mb-4 flex items-center gap-2"><FileText size={16} /> Dados do Documento</h2>
+          <h2 className="font-semibold text-[#1B2E4B] mb-4 flex items-center gap-2"><FileText size={16} /> Configurações</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Input label="Título do Documento" placeholder="Ex: Procuração ad Judicia" error={errors.title?.message} required {...register('title')} />
-            </div>
             <Input label="Expiração (dias)" type="number" error={errors.expiration_days?.message} {...register('expiration_days')} />
           </div>
         </div>
@@ -220,7 +292,7 @@ export default function NewDocument() {
             <Button variant="ghost" type="button">Cancelar</Button>
           </Link>
           <Button type="submit" size="lg" loading={isSubmitting} icon={isSubmitting ? undefined : <FileText size={16} />}>
-            Criar e Enviar Link
+            {isBatch ? `Criar e Enviar ${pdfEntries.length} Documentos` : 'Criar e Enviar Link'}
           </Button>
         </div>
       </form>

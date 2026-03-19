@@ -6,11 +6,12 @@ RUN apk add --no-cache \
         libzip-dev zip unzip git \
         postgresql-dev \
         openssl-dev \
+        qpdf \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo pdo_pgsql \
         gd zip bcmath opcache \
-        pcntl   # necessário para Queue Worker
+        pcntl
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

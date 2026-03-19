@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 
 class Document extends Model
 {
+    protected $appends = ['signing_url'];
+
     protected $fillable = [
         'user_id',
         'client_id',
@@ -19,6 +21,7 @@ class Document extends Model
         'original_file_path',
         'signed_file_path',
         'signing_token',
+        'batch_token',
         'status',
         'original_hash',
         'final_hash',
@@ -168,5 +171,25 @@ class Document extends Model
             'cancelled'     => 'Cancelado',
             default         => $this->status,
         };
+    }
+
+    /** Documentos do mesmo lote */
+    public function batchDocuments()
+    {
+        if (! $this->batch_token) {
+            return static::where('id', $this->id);
+        }
+
+        return static::where('batch_token', $this->batch_token);
+    }
+
+    /** URL pública do lote para o cliente assinar */
+    public function getBatchSigningUrlAttribute(): ?string
+    {
+        if (! $this->batch_token) {
+            return null;
+        }
+
+        return config('app.frontend_url') . '/sign/batch/' . $this->batch_token;
     }
 }

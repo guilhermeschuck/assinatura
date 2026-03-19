@@ -86,9 +86,9 @@ export default function Clients() {
 
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>Clientes</h1>
           <p className="text-sm text-[#6B7280] mt-1">Gerencie os clientes do escritório</p>
@@ -139,16 +139,16 @@ export default function Clients() {
                   transition={{ delay: i * 0.02 }}
                   className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 hover:bg-[#FDFCF9] transition-colors items-center"
                 >
-                  <div className="col-span-3 flex items-center gap-3">
+                  <div className="md:col-span-3 flex items-center gap-3">
                     <div className="w-8 h-8 bg-[#F0EDE8] rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-[#1B2E4B]">
                       {c.name.charAt(0).toUpperCase()}
                     </div>
                     <span className="font-medium text-[#1B2E4B] truncate">{c.name}</span>
                   </div>
-                  <div className="col-span-2 text-sm text-[#374151]">{c.cpf}</div>
-                  <div className="col-span-3 text-sm text-[#374151] truncate">{c.email}</div>
-                  <div className="col-span-2 text-sm text-[#6B7280]">{c.whatsapp || '—'}</div>
-                  <div className="col-span-2 flex items-center justify-end gap-1">
+                  <div className="md:col-span-2 flex items-center gap-2 md:block text-sm text-[#374151]"><span className="text-xs text-[#9CA3AF] md:hidden">CPF:</span> {c.cpf}</div>
+                  <div className="md:col-span-3 flex items-center gap-2 md:block text-sm text-[#374151] truncate"><span className="text-xs text-[#9CA3AF] md:hidden">E-mail:</span> {c.email}</div>
+                  <div className="md:col-span-2 flex items-center gap-2 md:block text-sm text-[#6B7280] hidden md:flex"><span className="text-xs text-[#9CA3AF] md:hidden">WhatsApp:</span> {c.whatsapp || '—'}</div>
+                  <div className="md:col-span-2 flex items-center justify-end gap-1">
                     <button onClick={() => openEdit(c)} className="p-1.5 rounded-md text-[#6B7280] hover:bg-[#F0EDE8] hover:text-[#1B2E4B] transition-colors" title="Editar">
                       <Pencil size={14} />
                     </button>

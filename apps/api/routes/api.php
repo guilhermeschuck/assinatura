@@ -26,12 +26,30 @@ Route::prefix('auth')->group(function () {
 // ---------------------------------------------------------------------------
 // Área pública — assinatura do cliente (sem autenticação)
 // ---------------------------------------------------------------------------
-Route::prefix('public/sign/{token}')->group(function () {
+// Área pública — assinatura em lote (batch) — deve vir antes da rota individual
+// ---------------------------------------------------------------------------
+Route::prefix('public/sign/batch/{batchToken}')->whereUuid('batchToken')->group(function () {
+    Route::get('/', [PublicSignController::class, 'showBatch']);
+    Route::get('/pdf/{documentId}', [PublicSignController::class, 'batchPdf'])
+         ->whereNumber('documentId');
+    Route::post('/', [PublicSignController::class, 'storeBatch'])
+         ->middleware('throttle:10,1');
+});
+
+// ---------------------------------------------------------------------------
+// Área pública — assinatura do cliente (sem autenticação)
+// ---------------------------------------------------------------------------
+Route::prefix('public/sign/{token}')->whereUuid('token')->group(function () {
     Route::get('/', [PublicSignController::class, 'show']);
     Route::get('/pdf', [PublicSignController::class, 'pdf']);
+    Route::get('/download', [PublicSignController::class, 'downloadSigned']);
     Route::post('/', [PublicSignController::class, 'store'])
          ->middleware('throttle:10,1'); // max 10 tentativas por minuto
 });
+
+// Verificação pública de autenticidade do documento
+Route::get('/public/verify/{token}', [PublicSignController::class, 'verify'])
+    ->whereUuid('token');
 
 // ---------------------------------------------------------------------------
 // Área autenticada — Advogado/Admin
@@ -44,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Documentos
     Route::get('/documents', [DocumentController::class, 'index']);
     Route::post('/documents', [DocumentController::class, 'store']);
+    Route::post('/documents/batch', [DocumentController::class, 'storeBatch']);
     Route::get('/documents/{document}', [DocumentController::class, 'show']);
     Route::patch('/documents/{document}/cancel', [DocumentController::class, 'cancel']);
     Route::post('/documents/{document}/resend-link', [DocumentController::class, 'resendLink']);

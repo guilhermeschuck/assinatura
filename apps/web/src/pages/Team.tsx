@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, UserPlus, Search, Pencil, Trash2, KeyRound,
   Scale, Crown, Mail, Phone, Hash, Calendar,
-  Loader2, AlertTriangle
+  Loader2, AlertTriangle, FileText
 } from 'lucide-react'
 import { teamService, type TeamMember } from '@/services/team.service'
 import { useAuthStore } from '@/stores/auth.store'
@@ -73,7 +74,7 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
 // ─── Member Card ───────────────────────────────────────────────────────────────
 function MemberCard({
   member, index, currentUserId, isAdmin,
-  onEdit, onDelete, onResetPassword,
+  onEdit, onDelete, onResetPassword, onViewDocuments,
 }: {
   member: TeamMember
   index: number
@@ -82,6 +83,7 @@ function MemberCard({
   onEdit: (m: TeamMember) => void
   onDelete: (m: TeamMember) => void
   onResetPassword: (m: TeamMember) => void
+  onViewDocuments: (m: TeamMember) => void
 }) {
   const isSelf = member.id === currentUserId
   const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
@@ -91,7 +93,8 @@ function MemberCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, ease: 'easeOut' }}
-      className="bg-white rounded-2xl border border-[#E2DDD5] shadow-sm hover:shadow-md hover:border-[#C9A84C]/40 transition-all duration-200 p-5 flex flex-col gap-4"
+      className="bg-white rounded-2xl border border-[#E2DDD5] shadow-sm hover:shadow-md hover:border-[#C9A84C]/40 transition-all duration-200 p-5 flex flex-col gap-4 cursor-pointer"
+      onClick={() => onViewDocuments(member)}
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-3">
@@ -134,7 +137,7 @@ function MemberCard({
 
       {/* Actions */}
       {isAdmin && (
-        <div className="flex items-center gap-1.5 pt-3 border-t border-[#F0EDE8]">
+        <div className="flex items-center gap-1.5 pt-3 border-t border-[#F0EDE8]" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => onEdit(member)}
             className="flex items-center gap-1.5 text-xs font-medium text-[#6B7280] hover:text-[#1B2E4B] hover:bg-[#F0EDE8] px-2.5 py-1.5 rounded-lg transition-colors"
@@ -165,6 +168,7 @@ function MemberCard({
 export default function Team() {
   const currentUser   = useAuthStore(s => s.user)
   const isAdmin       = currentUser?.role === 'admin'
+  const navigate      = useNavigate()
 
   const [members, setMembers]       = useState<TeamMember[]>([])
   const [loading, setLoading]       = useState(true)
@@ -177,6 +181,7 @@ export default function Team() {
   const [editing, setEditing]         = useState<TeamMember | null>(null)
   const [deleting, setDeleting]       = useState<TeamMember | null>(null)
   const [resetting, setResetting]     = useState<TeamMember | null>(null)
+  const [viewing, setViewing]         = useState<TeamMember | null>(null)
 
   // Form state
   const [fName, setFName]       = useState('')
@@ -193,7 +198,7 @@ export default function Team() {
       const res = await teamService.list({ search: search || undefined })
       setMembers(res.data.data)
     } catch {
-      setError('Erro ao carregar membros. Apenas administradores têm acesso.')
+      setError('Erro ao carregar membros.')
     } finally {
       setLoading(false)
     }
@@ -271,10 +276,10 @@ export default function Team() {
   const lawyers = members.filter(m => m.role === 'lawyer').length
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>
             Equipe
@@ -302,18 +307,12 @@ export default function Team() {
         )}
       </AnimatePresence>
 
-      {!isAdmin && (
-        <Alert variant="warning" className="mb-6" title="Acesso restrito">
-          Apenas administradores podem gerenciar membros da equipe.
-        </Alert>
-      )}
-
       {/* ── Stats bar ── */}
       {!loading && members.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="grid grid-cols-3 gap-4 mb-6"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6"
         >
           {[
             { label: 'Total', value: members.length, icon: <Users size={16} />, color: 'text-[#1B2E4B]', bg: 'bg-[#F0EDE8]' },
@@ -366,6 +365,7 @@ export default function Team() {
               onEdit={openEdit}
               onDelete={setDeleting}
               onResetPassword={setResetting}
+              onViewDocuments={setViewing}
             />
           ))}
         </div>
@@ -524,6 +524,39 @@ export default function Team() {
             Gerar e Enviar Nova Senha
           </Button>
         </div>
+      </Modal>
+
+      {/* ── Modal: Ver Documentos ── */}
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title="Documentos do Membro" maxWidth="sm">
+        {viewing && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-[#F8F7F4] rounded-xl border border-[#E2DDD5]">
+              <Avatar name={viewing.name} size="md" />
+              <div>
+                <p className="text-sm font-medium text-[#1B2E4B]">{viewing.name}</p>
+                <p className="text-xs text-[#6B7280]">{viewing.email}</p>
+                <RoleBadge role={viewing.role} />
+              </div>
+            </div>
+
+            <p className="text-sm text-[#6B7280]">
+              Visualize todos os documentos submetidos por este membro da equipe.
+            </p>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="ghost" onClick={() => setViewing(null)}>Fechar</Button>
+              <Button
+                icon={<FileText size={15} />}
+                onClick={() => {
+                  navigate(`/documents?lawyer_id=${viewing.id}`)
+                  setViewing(null)
+                }}
+              >
+                Ver Documentos
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

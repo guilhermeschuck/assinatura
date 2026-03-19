@@ -141,6 +141,8 @@ export interface SigningWizardData {
   timezone: string
   selfie_file: File | null
   selfie_preview: string | null
+  signature_file: File | null
+  signature_preview: string | null
 }
 
 export interface PublicDocumentResponse {
@@ -158,6 +160,67 @@ export interface PublicDocumentResponse {
     email: string
   }
   pdf_url: string
+}
+
+export interface BatchDocumentEntry {
+  id: number
+  title: string
+  status: DocumentStatus
+  signing_token: string
+}
+
+export interface BatchDocumentResponse {
+  batch_token: string
+  documents: BatchDocumentEntry[]
+  total_documents: number
+  pending_documents: number
+  client: {
+    name: string
+    cpf: string
+    email: string
+  }
+  document: {
+    lawyer_name: string
+    oab_number: string | null
+    expires_at: string | null
+  }
+}
+
+export interface VerifyDocumentResponse {
+  document: {
+    title: string
+    status: DocumentStatus
+    original_hash: string | null
+    final_hash: string | null
+    created_at: string
+    completed_at: string | null
+  }
+  client: {
+    name: string
+    cpf: string
+    email: string
+  }
+  client_signature: {
+    signed_at: string
+    ip_address: string | null
+    geolocation: string | null
+    timezone: string | null
+    selfie_url: string | null
+    signature_url: string | null
+  } | null
+  lawyer: {
+    name: string
+    oab_number: string | null
+  }
+  lawyer_signature: {
+    signed_at: string
+    certificate: {
+      subject: string | null
+      issuer: string | null
+      valid_from: string | null
+      valid_until: string | null
+    }
+  } | null
 }
 
 // ---------------------------------------------------------------------------

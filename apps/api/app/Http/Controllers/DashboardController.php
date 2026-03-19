@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -10,9 +11,7 @@ class DashboardController extends Controller
 {
     public function stats(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-
-        $stats = Document::where('user_id', $userId)
+        $stats = Document::whereIn('user_id', User::teamUserIds())
             ->selectRaw("
                 COUNT(*) as total,
                 COUNT(*) FILTER (WHERE status = 'pending') as pending,

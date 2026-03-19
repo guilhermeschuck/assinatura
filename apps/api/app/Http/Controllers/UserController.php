@@ -17,7 +17,6 @@ class UserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_if(! $request->user()->isAdmin(), 403, 'Apenas administradores podem gerenciar a equipe.');
 
         $users = User::query()
             ->when($request->search, fn ($q, $s) =>
@@ -146,7 +145,7 @@ class UserController extends Controller
             ],
             fn ($msg) => $msg
                 ->to($user->email, $user->name)
-                ->subject('Sua senha foi redefinida — Assinatura Jurídica'),
+                ->subject('Sua senha foi redefinida — KoetzSing'),
         );
 
         return response()->json(['message' => 'Nova senha enviada por e-mail.']);

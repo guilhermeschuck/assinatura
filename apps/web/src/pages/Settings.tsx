@@ -79,7 +79,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -122,7 +122,7 @@ export default function Settings() {
                 label="Nome do Remetente"
                 value={form.mail_from_name}
                 onChange={e => set('mail_from_name', e.target.value)}
-                placeholder="Assinatura Jurídica"
+                placeholder="KoetzSing"
               />
               <Input
                 label="E-mail do Remetente"

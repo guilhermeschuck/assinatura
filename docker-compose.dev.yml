@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Ambiente de desenvolvimento — apenas infraestrutura (PostgreSQL + Redis)
 # O Laravel e o React rodam diretamente na máquina local.
 #

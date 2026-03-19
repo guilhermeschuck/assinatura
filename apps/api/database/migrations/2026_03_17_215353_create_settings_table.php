@@ -19,7 +19,7 @@ return new class extends Migration
 
         // Seed com os valores padrão do .env
         DB::table('settings')->insert([
-            ['key' => 'mail_from_name',    'value' => env('APP_NAME', 'Assinatura Jurídica')],
+            ['key' => 'mail_from_name',    'value' => env('APP_NAME', 'KoetzSing')],
             ['key' => 'mail_from_address', 'value' => env('MAIL_FROM_ADDRESS', 'assinatura@escritorio.com.br')],
             ['key' => 'mail_mailer',       'value' => env('MAIL_MAILER', 'smtp')],
             ['key' => 'mail_host',         'value' => env('MAIL_HOST', '127.0.0.1')],

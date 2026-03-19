@@ -110,7 +110,7 @@ export default function DocumentDetail() {
 
   if (!doc) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
         <Alert variant="error">Documento não encontrado.</Alert>
       </div>
     )
@@ -120,7 +120,7 @@ export default function DocumentDetail() {
   const lawyerSig = doc.lawyer_signature as Signature | undefined
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Voltar */}
       <Link to="/documents" className="inline-flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1B2E4B] mb-4 transition-colors">
         <ArrowLeft size={14} /> Voltar para documentos

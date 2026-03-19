@@ -8,22 +8,23 @@ import { SelfieCapture } from '@/components/signing/SelfieCapture'
 import { SignaturePad } from '@/components/signing/SignaturePad'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
-import type { PublicDocumentResponse, SigningWizardData } from '@/types'
+import type { BatchDocumentResponse, BatchDocumentEntry, SigningWizardData } from '@/types'
 
 const STEPS = [
   { label: 'Boas-vindas' },
-  { label: 'Documento' },
+  { label: 'Documentos' },
   { label: 'Aceite' },
   { label: 'Evidências' },
   { label: 'Confirmar' },
 ]
 
-export default function Sign() {
-  const { token } = useParams<{ token: string }>()
+export default function BatchSign() {
+  const { batchToken } = useParams<{ batchToken: string }>()
 
   const [step, setStep]           = useState(0)
-  const [docData, setDocData]     = useState<PublicDocumentResponse | null>(null)
-  const [pdfUrl, setPdfUrl]       = useState<string | null>(null)
+  const [batchData, setBatchData] = useState<BatchDocumentResponse | null>(null)
+  const [pdfUrls, setPdfUrls]     = useState<Record<number, string>>({})
+  const [activeDocId, setActiveDocId] = useState<number | null>(null)
   const [loading, setLoading]     = useState(true)
   const [submitting, setSubmit]   = useState(false)
   const [error, setError]         = useState<string | null>(null)
@@ -42,33 +43,40 @@ export default function Sign() {
   const [geoError, setGeoError] = useState<string | null>(null)
   const [geoLoading, setGeoLoading] = useState(false)
 
-  // Carrega os dados do documento
+  // Carrega dados do lote
   useEffect(() => {
-    if (! token) return
+    if (!batchToken) return
 
-    documentsService.getPublic(token)
-      .then(res => { setDocData(res.data.data as any) })
+    documentsService.getBatchPublic(batchToken)
+      .then(res => {
+        const data = res.data.data as any as BatchDocumentResponse
+        setBatchData(data)
+        if (data.documents.length > 0) {
+          setActiveDocId(data.documents[0].id)
+        }
+      })
       .catch(err => {
-        const msg = err.response?.data?.message
-        setError(msg ?? 'Link inválido ou expirado.')
+        setError(err.response?.data?.message ?? 'Link inválido ou expirado.')
       })
       .finally(() => setLoading(false))
-  }, [token])
+  }, [batchToken])
 
-  // Carrega o PDF para o visualizador
+  // Carrega PDF do documento ativo quando no step de visualização
   useEffect(() => {
-    if (step !== 1 || ! token) return
-    documentsService.getPublicPdf(token)
+    if (step !== 1 || !batchToken || !activeDocId) return
+    if (pdfUrls[activeDocId]) return // já carregou
+
+    documentsService.getBatchPdf(batchToken, activeDocId)
       .then(res => {
         const url = URL.createObjectURL(res.data as Blob)
-        setPdfUrl(url)
+        setPdfUrls(prev => ({ ...prev, [activeDocId]: url }))
       })
       .catch(() => setError('Não foi possível carregar o documento.'))
-  }, [step, token])
+  }, [step, batchToken, activeDocId, pdfUrls])
 
   const requestGeolocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setGeoError('Seu navegador não suporta geolocalização. Utilize um navegador moderno para continuar.')
+      setGeoError('Seu navegador não suporta geolocalização.')
       return
     }
     setGeoLoading(true)
@@ -94,7 +102,7 @@ export default function Sign() {
   }, [step, requestGeolocation])
 
   const handleSubmit = useCallback(async () => {
-    if (!token || !wizardData.selfie_file || !wizardData.signature_file || !wizardData.latitude || !wizardData.longitude) return
+    if (!batchToken || !wizardData.selfie_file || !wizardData.signature_file || !wizardData.latitude || !wizardData.longitude) return
     setSubmit(true)
     setError(null)
 
@@ -107,14 +115,14 @@ export default function Sign() {
       form.append('longitude', String(wizardData.longitude))
       form.append('timezone', wizardData.timezone)
 
-      await documentsService.submitClientSignature(token, form)
+      await documentsService.submitBatchClientSignature(batchToken, form)
       setCompleted(true)
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Ocorreu um erro ao processar sua assinatura.')
     } finally {
       setSubmit(false)
     }
-  }, [token, wizardData])
+  }, [batchToken, wizardData])
 
   if (loading) {
     return (
@@ -124,7 +132,7 @@ export default function Sign() {
     )
   }
 
-  if (error && ! docData) {
+  if (error && !batchData) {
     return (
       <div className="min-h-screen bg-[#F8F7F4] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
@@ -155,17 +163,17 @@ export default function Sign() {
             <CheckCircle2 size={40} className="text-[#0F7A5A]" />
           </motion.div>
           <h1 className="text-2xl font-bold text-[#1B2E4B] mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Assinado com Sucesso!
+            {batchData?.pending_documents} Documento(s) Assinado(s)!
           </h1>
           <p className="text-[#6B7280] leading-relaxed">
-            Sua assinatura foi registrada. Você receberá uma cópia do documento final por e-mail assim que o advogado concluir a assinatura digital.
+            Suas assinaturas foram registradas com sucesso. Você receberá uma cópia de cada documento final por e-mail assim que o advogado concluir as assinaturas digitais.
           </p>
         </motion.div>
       </div>
     )
   }
 
-  const doc = docData as any
+  const docs = batchData?.documents ?? []
 
   return (
     <div className="min-h-screen bg-[#F8F7F4]">
@@ -178,12 +186,17 @@ export default function Sign() {
             </div>
             <div>
               <p className="text-xs text-[#C9A84C] font-medium uppercase tracking-wide">KoetzSing</p>
-              <p className="text-sm font-semibold leading-tight">{doc?.document?.lawyer_name}</p>
+              <p className="text-sm font-semibold leading-tight">{batchData?.document?.lawyer_name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-xs text-[#94A3B8]">
-            <Shield size={12} />
-            <span>Lei 14.063/2020</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-[#C9A84C]/20 text-[#C9A84C] rounded-full px-2.5 py-0.5 font-medium">
+              {docs.length} docs
+            </span>
+            <div className="flex items-center gap-1 text-xs text-[#94A3B8]">
+              <Shield size={12} />
+              <span>Lei 14.063/2020</span>
+            </div>
           </div>
         </div>
       </header>
@@ -204,25 +217,32 @@ export default function Sign() {
             <motion.div key="s0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="bg-white rounded-xl shadow-sm border border-[#E2DDD5] p-8">
                 <h1 className="text-2xl font-bold text-[#1B2E4B] mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  Olá, {doc?.client?.name?.split(' ')[0]}!
+                  Olá, {batchData?.client?.name?.split(' ')[0]}!
                 </h1>
                 <p className="text-[#6B7280] mb-6">
-                  O(A) advogado(a) <strong className="text-[#1B2E4B]">{doc?.document?.lawyer_name}</strong>
-                  {doc?.document?.oab_number ? ` (OAB ${doc.document.oab_number})` : ''} enviou um documento para você assinar eletronicamente.
+                  O(A) advogado(a) <strong className="text-[#1B2E4B]">{batchData?.document?.lawyer_name}</strong>
+                  {batchData?.document?.oab_number ? ` (OAB ${batchData.document.oab_number})` : ''} enviou <strong className="text-[#1B2E4B]">{docs.length} documentos</strong> para você assinar eletronicamente.
                 </p>
 
                 <div className="bg-[#F8F7F4] rounded-lg p-4 border border-[#E2DDD5] mb-6">
-                  <p className="text-xs text-[#6B7280] uppercase tracking-wide font-medium mb-1">Documento</p>
-                  <p className="font-semibold text-[#1B2E4B] text-lg">{doc?.document?.title}</p>
+                  <p className="text-xs text-[#6B7280] uppercase tracking-wide font-medium mb-2">Documentos para assinatura</p>
+                  <ul className="space-y-1.5">
+                    {docs.map((doc: BatchDocumentEntry, i: number) => (
+                      <li key={doc.id} className="flex items-center gap-2 text-sm">
+                        <span className="w-5 h-5 bg-[#1B2E4B] text-white rounded-full flex items-center justify-center text-xs font-medium">{i + 1}</span>
+                        <span className="font-medium text-[#1B2E4B]">{doc.title}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <Alert variant="info" title="O que acontecerá a seguir">
                   <ol className="list-decimal list-inside space-y-1 mt-1 text-sm">
-                    <li>Você lerá o documento na íntegra</li>
-                    <li>Aceitará os termos explicitamente</li>
+                    <li>Você lerá cada documento na íntegra</li>
+                    <li>Aceitará os termos de todos os documentos</li>
                     <li>Enviará uma selfie com seu documento de identidade</li>
                     <li>Assinará / rubricará na tela</li>
-                    <li>Confirmará e assinará eletronicamente</li>
+                    <li>Confirmará e assinará todos eletronicamente</li>
                   </ol>
                 </Alert>
 
@@ -233,23 +253,41 @@ export default function Sign() {
             </motion.div>
           )}
 
-          {/* Step 1 — Visualização do documento */}
+          {/* Step 1 — Visualização dos documentos (abas) */}
           {step === 1 && (
             <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="bg-white rounded-xl shadow-sm border border-[#E2DDD5] overflow-hidden">
                 <div className="p-4 border-b border-[#E2DDD5] bg-[#F8F7F4]">
-                  <h2 className="font-semibold text-[#1B2E4B]">Leia o documento na íntegra</h2>
+                  <h2 className="font-semibold text-[#1B2E4B] mb-3">Leia cada documento na íntegra</h2>
+                  {/* Abas dos documentos */}
+                  <div className="flex gap-1 flex-wrap">
+                    {docs.map((doc: BatchDocumentEntry, i: number) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setActiveDocId(doc.id)}
+                        className={[
+                          'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                          activeDocId === doc.id
+                            ? 'bg-[#1B2E4B] text-white'
+                            : 'bg-white text-[#6B7280] hover:bg-[#E2DDD5]',
+                        ].join(' ')}
+                      >
+                        {i + 1}. {doc.title.length > 25 ? doc.title.slice(0, 25) + '…' : doc.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="h-[500px] overflow-auto bg-gray-100 flex items-center justify-center">
-                  {pdfUrl ? (
-                    <iframe src={pdfUrl} className="w-full h-full border-0" title="Documento PDF" />
+                  {activeDocId && pdfUrls[activeDocId] ? (
+                    <iframe src={pdfUrls[activeDocId]} className="w-full h-full border-0" title="Documento PDF" />
                   ) : (
                     <Loader2 size={28} className="animate-spin text-[#1B2E4B]" />
                   )}
                 </div>
                 <div className="p-4 border-t border-[#E2DDD5]">
                   <Button className="w-full" onClick={() => setStep(2)}>
-                    Li o documento, continuar →
+                    Li todos os documentos, continuar →
                   </Button>
                 </div>
               </div>
@@ -267,10 +305,15 @@ export default function Sign() {
                 <div className="bg-[#F8F7F4] border border-[#E2DDD5] rounded-lg p-4 max-h-48 overflow-y-auto mb-6 text-sm text-[#374151] leading-relaxed">
                   <p className="font-semibold mb-2">Declaração de Aceite</p>
                   <p>
-                    Ao assinar este documento eletronicamente, declaro que: (i) li e compreendi integralmente o conteúdo do documento <strong>{doc?.document?.title}</strong>;
-                    (ii) concordo com todos os termos e condições nele estabelecidos; (iii) estou ciente de que minha assinatura eletrônica tem plena validade jurídica conforme
+                    Ao assinar estes documentos eletronicamente, declaro que: (i) li e compreendi integralmente o conteúdo dos {docs.length} documentos listados abaixo;
+                    (ii) concordo com todos os termos e condições neles estabelecidos; (iii) estou ciente de que minha assinatura eletrônica tem plena validade jurídica conforme
                     a Lei 14.063/2020; (iv) autorizo a coleta do meu endereço IP, geolocalização e imagem para fins de comprovação da autoria da assinatura.
                   </p>
+                  <ul className="mt-3 space-y-1">
+                    {docs.map((doc: BatchDocumentEntry, i: number) => (
+                      <li key={doc.id} className="text-[#1B2E4B] font-medium">{i + 1}. {doc.title}</li>
+                    ))}
+                  </ul>
                 </div>
 
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -281,7 +324,7 @@ export default function Sign() {
                     className="mt-1 w-4 h-4 accent-[#1B2E4B]"
                   />
                   <span className="text-sm text-[#374151]">
-                    <strong>Li e concordo</strong> com os termos do documento e com a declaração acima.
+                    <strong>Li e concordo</strong> com os termos de todos os {docs.length} documentos e com a declaração acima.
                   </span>
                 </label>
 
@@ -289,7 +332,7 @@ export default function Sign() {
                   <Button variant="ghost" onClick={() => setStep(1)}>← Voltar</Button>
                   <Button
                     className="flex-1"
-                    disabled={! wizardData.accepted_terms}
+                    disabled={!wizardData.accepted_terms}
                     onClick={() => setStep(3)}
                   >
                     Aceitar e continuar →
@@ -308,9 +351,10 @@ export default function Sign() {
                 </h2>
                 <p className="text-sm text-[#6B7280] mb-6">
                   Essa etapa é necessária para garantir a validade jurídica da sua assinatura eletrônica (Lei 14.063/2020).
+                  As evidências serão aplicadas a todos os {docs.length} documentos.
                 </p>
 
-                {/* Geolocalização obrigatória */}
+                {/* Geolocalização */}
                 {wizardData.latitude && wizardData.longitude ? (
                   <div className="flex items-center gap-2 text-xs text-[#0F7A5A] mb-4 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                     <MapPin size={12} />
@@ -318,20 +362,12 @@ export default function Sign() {
                   </div>
                 ) : (
                   <div className="mb-4">
-                    {geoError && (
-                      <Alert variant="error" className="mb-3">{geoError}</Alert>
-                    )}
+                    {geoError && <Alert variant="error" className="mb-3">{geoError}</Alert>}
                     <div className="flex items-center gap-2 text-xs text-amber-700 mb-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                       <MapPin size={12} />
                       <span>Geolocalização é obrigatória para prosseguir.</span>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon={<MapPin size={14} />}
-                      loading={geoLoading}
-                      onClick={requestGeolocation}
-                    >
+                    <Button size="sm" variant="ghost" icon={<MapPin size={14} />} loading={geoLoading} onClick={requestGeolocation}>
                       Permitir Geolocalização
                     </Button>
                   </div>
@@ -345,7 +381,7 @@ export default function Sign() {
                   preview={wizardData.selfie_preview}
                 />
 
-                {/* Assinatura / Rubrica */}
+                {/* Assinatura */}
                 <div className="mt-6 pt-6 border-t border-[#E2DDD5]">
                   <h3 className="text-sm font-semibold text-[#1B2E4B] mb-3">Assinatura / Rubrica</h3>
                   <SignaturePad
@@ -370,30 +406,37 @@ export default function Sign() {
             </motion.div>
           )}
 
-          {/* Step 4 — Confirmação e assinatura */}
+          {/* Step 4 — Confirmação */}
           {step === 4 && (
             <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="bg-white rounded-xl shadow-sm border border-[#E2DDD5] p-8">
                 <h2 className="text-xl font-bold text-[#1B2E4B] mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>
-                  Confirmar e Assinar
+                  Confirmar e Assinar {docs.length} Documentos
                 </h2>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-sm py-2 border-b border-[#E2DDD5]">
-                    <span className="text-[#6B7280]">Documento</span>
-                    <span className="font-medium text-[#1B2E4B]">{doc?.document?.title}</span>
+                  <div className="text-sm py-2 border-b border-[#E2DDD5]">
+                    <span className="text-[#6B7280] block mb-1">Documentos</span>
+                    <ul className="space-y-1">
+                      {docs.map((doc: BatchDocumentEntry, i: number) => (
+                        <li key={doc.id} className="font-medium text-[#1B2E4B] text-sm flex items-center gap-2">
+                          <span className="w-4 h-4 bg-[#1B2E4B] text-white rounded-full flex items-center justify-center text-[10px]">{i + 1}</span>
+                          {doc.title}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                   <div className="flex justify-between text-sm py-2 border-b border-[#E2DDD5]">
                     <span className="text-[#6B7280]">Assinante</span>
-                    <span className="font-medium text-[#1B2E4B]">{doc?.client?.name}</span>
+                    <span className="font-medium text-[#1B2E4B]">{batchData?.client?.name}</span>
                   </div>
                   <div className="flex justify-between text-sm py-2 border-b border-[#E2DDD5]">
                     <span className="text-[#6B7280]">CPF</span>
-                    <span className="font-medium text-[#1B2E4B]">{doc?.client?.cpf}</span>
+                    <span className="font-medium text-[#1B2E4B]">{batchData?.client?.cpf}</span>
                   </div>
                   <div className="flex justify-between text-sm py-2 border-b border-[#E2DDD5]">
                     <span className="text-[#6B7280]">Termos aceitos</span>
-                    <span className="text-[#0F7A5A] font-medium">✓ Sim</span>
+                    <span className="text-[#0F7A5A] font-medium">✓ Sim ({docs.length} documentos)</span>
                   </div>
                   <div className="flex justify-between text-sm py-2 border-b border-[#E2DDD5]">
                     <span className="text-[#6B7280]">Selfie com documento</span>
@@ -412,7 +455,7 @@ export default function Sign() {
                 {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
                 <Alert variant="warning" title="Ação irreversível">
-                  Ao clicar em "Assinar", sua assinatura eletrônica será registrada de forma definitiva com todos os dados coletados acima.
+                  Ao clicar em "Assinar", sua assinatura eletrônica será registrada de forma definitiva para todos os {docs.length} documentos com todos os dados coletados acima.
                 </Alert>
 
                 <div className="flex gap-3 mt-6">
@@ -424,7 +467,7 @@ export default function Sign() {
                     loading={submitting}
                     onClick={handleSubmit}
                   >
-                    Assinar Eletronicamente
+                    Assinar {docs.length} Documentos
                   </Button>
                 </div>
               </div>

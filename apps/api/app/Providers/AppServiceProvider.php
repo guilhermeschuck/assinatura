@@ -42,7 +42,7 @@ class AppServiceProvider extends ServiceProvider
                 'mail_port'         => 'mail.mailers.smtp.port',
                 'mail_username'     => 'mail.mailers.smtp.username',
                 'mail_password'     => 'mail.mailers.smtp.password',
-                'mail_encryption'   => 'mail.mailers.smtp.encryption',
+                'mail_encryption'   => 'mail.mailers.smtp.scheme',
             ];
 
             foreach ($map as $dbKey => $configKey) {

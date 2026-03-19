@@ -40,12 +40,12 @@ export default function Dashboard() {
   }, [])
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Saudação */}
-      <div className="mb-8 flex items-end justify-between">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-sm text-[#6B7280] mb-1">Bem-vindo de volta</p>
-          <h1 className="text-3xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1B2E4B]" style={{ fontFamily: "'Playfair Display', serif" }}>
             {user?.name}
           </h1>
           {user?.oab_number && <p className="text-sm text-[#C9A84C] font-medium mt-1">OAB {user.oab_number}</p>}
@@ -81,7 +81,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#EFF6FF] border border-blue-200 rounded-xl p-5 mb-6 flex items-center justify-between"
+          className="bg-[#EFF6FF] border border-blue-200 rounded-xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -138,7 +138,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <StatusBadge status={doc.status} />
-                  <ArrowRight size={14} className="text-[#C9A84C]" />
+                  <ArrowRight size={14} className="text-[#C9A84C] hidden sm:block" />
                 </div>
               </Link>
             ))}

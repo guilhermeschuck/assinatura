@@ -22,12 +22,7 @@ class CertificateService
         $pfxContent = file_get_contents($pfxFile->getRealPath());
 
         // 2. Tenta abrir o certificado com a senha fornecida
-        $certData = [];
-        $opened   = openssl_pkcs12_read($pfxContent, $certData, $password);
-
-        if (! $opened) {
-            throw new RuntimeException('Não foi possível abrir o certificado. Verifique se a senha está correta e se o arquivo é um .pfx/.p12 válido.');
-        }
+        $certData = $this->readPkcs12($pfxContent, $password);
 
         // 3. Extrai metadados do certificado X.509
         $x509Details = openssl_x509_parse($certData['cert']);
@@ -51,8 +46,8 @@ class CertificateService
         $filename = "certificates/{$user->id}/" . now()->format('YmdHis') . '_' . uniqid() . '.pfx';
         Storage::disk('local')->put($filename, $pfxContent);
 
-        // 5. Desativa certificados anteriores do usuário
-        $user->certificates()->active()->update(['is_active' => false]);
+        // 5. Desativa certificados anteriores de toda a equipe
+        Certificate::whereIn('user_id', User::teamUserIds())->active()->update(['is_active' => false]);
 
         // 6. Persiste no banco com senha criptografada
         return Certificate::create([
@@ -82,13 +77,73 @@ class CertificateService
         }
 
         $password = Crypt::decryptString($certificate->password_encrypted);
-        $certData = [];
 
-        if (! openssl_pkcs12_read($pfxContent, $certData, $password)) {
-            throw new RuntimeException('Falha ao abrir o certificado A1. O arquivo pode ter sido corrompido.');
+        return $this->readPkcs12($pfxContent, $password);
+    }
+
+    /**
+     * Lê um arquivo PKCS12 (.pfx/.p12) com suporte a certificados ICP-Brasil
+     * que usam algoritmos legados (RC2, 3DES) incompatíveis com OpenSSL 3.x.
+     *
+     * Tenta primeiro via extensão PHP; se falhar, usa o CLI openssl com -legacy.
+     */
+    private function readPkcs12(string $pfxContent, string $password): array
+    {
+        // Tentativa 1: extensão PHP (funciona para certificados modernos)
+        $certData = [];
+        if (openssl_pkcs12_read($pfxContent, $certData, $password)) {
+            return $certData;
         }
 
-        return $certData; // ['cert' => '...', 'pkey' => '...', 'extracerts' => [...]]
+        // Tentativa 2: CLI openssl com -legacy (certificados ICP-Brasil)
+        $tmpPfx = tempnam(sys_get_temp_dir(), 'pfx_');
+        $tmpPem = tempnam(sys_get_temp_dir(), 'pem_');
+
+        try {
+            file_put_contents($tmpPfx, $pfxContent);
+            chmod($tmpPfx, 0600);
+
+            $escapedPass = escapeshellarg($password);
+
+            // Extrai cert + key em PEM usando -legacy
+            $cmd = sprintf(
+                'openssl pkcs12 -in %s -out %s -nodes -passin pass:%s -legacy 2>&1',
+                escapeshellarg($tmpPfx),
+                escapeshellarg($tmpPem),
+                $escapedPass,
+            );
+
+            exec($cmd, $output, $exitCode);
+
+            if ($exitCode !== 0) {
+                throw new RuntimeException(
+                    'Não foi possível abrir o certificado. Verifique se a senha está correta e se o arquivo é um .pfx/.p12 válido.'
+                );
+            }
+
+            $pemContent = file_get_contents($tmpPem);
+
+            // Extrai certificado e chave privada do PEM
+            $cert = $pkey = null;
+
+            if (preg_match('/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s', $pemContent, $m)) {
+                $cert = $m[0];
+            }
+            if (preg_match('/-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----/s', $pemContent, $m)) {
+                $pkey = $m[0];
+            }
+
+            if (! $cert || ! $pkey) {
+                throw new RuntimeException(
+                    'Não foi possível extrair o certificado e a chave privada do arquivo .pfx/.p12.'
+                );
+            }
+
+            return ['cert' => $cert, 'pkey' => $pkey];
+        } finally {
+            @unlink($tmpPfx);
+            @unlink($tmpPem);
+        }
     }
 
     /**

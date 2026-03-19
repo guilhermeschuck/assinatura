@@ -6,6 +6,9 @@ import { AppLayout } from '@/components/dashboard/AppLayout'
 const Login               = lazy(() => import('@/pages/Login'))
 const Dashboard           = lazy(() => import('@/pages/Dashboard'))
 const Sign                = lazy(() => import('@/pages/Sign'))
+const BatchSign           = lazy(() => import('@/pages/BatchSign'))
+const SignCompleted       = lazy(() => import('@/pages/SignCompleted'))
+const VerifyDocument      = lazy(() => import('@/pages/VerifyDocument'))
 const DocumentList        = lazy(() => import('@/pages/DocumentList'))
 const NewDocument         = lazy(() => import('@/pages/NewDocument'))
 const DocumentDetail      = lazy(() => import('@/pages/DocumentDetail'))
@@ -30,7 +33,10 @@ export default function App() {
         <Routes>
           {/* Pública */}
           <Route path="/login" element={<Login />} />
+          <Route path="/sign/batch/:batchToken" element={<BatchSign />} />
+          <Route path="/sign/:token/completed" element={<SignCompleted />} />
           <Route path="/sign/:token" element={<Sign />} />
+          <Route path="/verify/:token" element={<VerifyDocument />} />
 
           {/* Autenticada */}
           <Route element={<AppLayout />}>

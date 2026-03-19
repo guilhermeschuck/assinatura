@@ -35,7 +35,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 'md' }: Modal
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.18 }}
-            className={`relative bg-white rounded-xl shadow-2xl w-full ${widths[maxWidth]} z-10`}
+            className={`relative bg-white rounded-xl shadow-2xl w-full ${widths[maxWidth]} z-10 max-h-[90vh] flex flex-col`}
           >
             {title && (
               <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#E2DDD5]">
@@ -50,7 +50,7 @@ export function Modal({ open, onClose, title, children, maxWidth = 'md' }: Modal
                 </button>
               </div>
             )}
-            <div className="p-6">{children}</div>
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
           </motion.div>
         </div>
       )}

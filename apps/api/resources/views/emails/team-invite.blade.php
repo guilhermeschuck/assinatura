@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{{ $isReset ?? false ? 'Nova Senha' : 'Convite de Acesso' }} — Assinatura Jurídica</title>
+  <title>{{ $isReset ?? false ? 'Nova Senha' : 'Convite de Acesso' }} — KoetzSing</title>
 </head>
 <body style="margin:0;padding:0;background:#F8F7F4;font-family:'Georgia',serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F7F4;padding:40px 20px;">
@@ -19,7 +19,7 @@
                   <td>
                     <div style="display:inline-flex;align-items:center;gap:10px;">
                       <div style="width:36px;height:36px;background:#C9A84C;border-radius:8px;display:inline-block;vertical-align:middle;"></div>
-                      <span style="font-size:18px;color:#ffffff;font-weight:600;vertical-align:middle;margin-left:10px;">Assinatura Jurídica</span>
+                      <span style="font-size:18px;color:#ffffff;font-weight:600;vertical-align:middle;margin-left:10px;">KoetzSing</span>
                     </div>
                     <p style="margin:8px 0 0;color:#C9A84C;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;">
                       {{ $isReset ?? false ? 'Redefinição de Senha' : 'Convite de Acesso' }}

@@ -425,7 +425,7 @@ Route::prefix('public')->group(function () {
 ### Variáveis de Ambiente (`.env.example`)
 
 ```dotenv
-APP_NAME="Assinatura Jurídica"
+APP_NAME="KoetzSing"
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false

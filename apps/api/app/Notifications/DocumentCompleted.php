@@ -25,7 +25,7 @@ class DocumentCompleted extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $downloadUrl = config('app.frontend_url') . '/documents/' . $this->document->id . '/download-public/' . $this->document->signing_token;
+        $downloadUrl = config('app.frontend_url') . '/sign/' . $this->document->signing_token . '/completed';
 
         $message = (new MailMessage)
             ->subject("📄 Documento concluído: {$this->document->title}");

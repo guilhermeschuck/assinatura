@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -10,7 +11,7 @@ class ClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Client::where('user_id', $request->user()->id)->latest();
+        $query = Client::whereIn('user_id', User::teamUserIds())->latest();
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -32,21 +33,30 @@ class ClientController extends Controller
             'whatsapp' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $client = Client::create([...$validated, 'user_id' => $request->user()->id]);
+        $existing = Client::whereIn('user_id', User::teamUserIds())
+            ->where('cpf', $validated['cpf'])
+            ->first();
 
-        return response()->json(['data' => $client], 201);
+        if ($existing) {
+            $existing->update(collect($validated)->except('cpf')->toArray());
+            $client = $existing;
+        } else {
+            $client = Client::create(array_merge($validated, ['user_id' => $request->user()->id]));
+        }
+
+        return response()->json(['data' => $client], $client->wasRecentlyCreated ? 201 : 200);
     }
 
     public function show(Request $request, Client $client): JsonResponse
     {
-        abort_if($client->user_id !== $request->user()->id, 403);
+        abort_if(! in_array($client->user_id, User::teamUserIds()), 403);
 
         return response()->json(['data' => $client->load('documents')]);
     }
 
     public function update(Request $request, Client $client): JsonResponse
     {
-        abort_if($client->user_id !== $request->user()->id, 403);
+        abort_if(! in_array($client->user_id, User::teamUserIds()), 403);
 
         $validated = $request->validate([
             'name'     => ['sometimes', 'string', 'max:255'],
@@ -61,7 +71,7 @@ class ClientController extends Controller
 
     public function destroy(Request $request, Client $client): JsonResponse
     {
-        abort_if($client->user_id !== $request->user()->id, 403);
+        abort_if(! in_array($client->user_id, User::teamUserIds()), 403);
 
         $client->delete();
 

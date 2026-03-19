@@ -4,10 +4,12 @@ import type {
   PaginatedResponse,
   ApiResponse,
   PublicDocumentResponse,
+  BatchDocumentResponse,
+  VerifyDocumentResponse,
 } from '@/types'
 
 export const documentsService = {
-  list(params?: { status?: string; page?: number; search?: string }) {
+  list(params?: { status?: string; page?: number; search?: string; lawyer_id?: number }) {
     return api.get<PaginatedResponse<Document>>('/documents', { params })
   },
 
@@ -17,6 +19,12 @@ export const documentsService = {
 
   create(data: FormData) {
     return api.post<ApiResponse<Document>>('/documents', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  createBatch(data: FormData) {
+    return api.post<ApiResponse<Document[]>>('/documents/batch', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
@@ -50,6 +58,29 @@ export const documentsService = {
 
   getPublicPdf(token: string) {
     return api.get(`/public/sign/${token}/pdf`, { responseType: 'blob' })
+  },
+
+  downloadPublicSigned(token: string) {
+    return api.get(`/public/sign/${token}/download`, { responseType: 'blob' })
+  },
+
+  // Batch — área pública
+  getBatchPublic(batchToken: string) {
+    return api.get<ApiResponse<BatchDocumentResponse>>(`/public/sign/batch/${batchToken}`)
+  },
+
+  getBatchPdf(batchToken: string, documentId: number) {
+    return api.get(`/public/sign/batch/${batchToken}/pdf/${documentId}`, { responseType: 'blob' })
+  },
+
+  submitBatchClientSignature(batchToken: string, data: FormData) {
+    return api.post<ApiResponse<{ message: string }>>(`/public/sign/batch/${batchToken}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  verifyDocument(token: string) {
+    return api.get<ApiResponse<VerifyDocumentResponse>>(`/public/verify/${token}`)
   },
 
   stats() {

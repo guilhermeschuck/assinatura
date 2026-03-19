@@ -57,9 +57,9 @@ export default function Login() {
             <FileText size={28} className="text-[#1B2E4B]" />
           </div>
           <h1 className="text-3xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Assinatura Jurídica
+            KoetzSing
           </h1>
-          <p className="text-white/50 text-sm mt-1">Sistema de Assinatura Eletrônica e Digital</p>
+          <p className="text-white/50 text-sm mt-1">Assinatura Eletrônica e Digital</p>
         </div>
 
         {/* Card de login */}

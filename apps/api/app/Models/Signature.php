@@ -21,6 +21,7 @@ class Signature extends Model
         'longitude',
         'timezone',
         'selfie_path',
+        'signature_path',
         'signature_type',
         'certificate_id',
         'document_hash',
@@ -86,6 +87,20 @@ class Signature extends Model
         }
 
         return Storage::url($this->selfie_path);
+    }
+
+    /** URL temporária da assinatura manuscrita (S3 ou storage local) */
+    public function getSignatureUrlAttribute(): ?string
+    {
+        if (! $this->signature_path) {
+            return null;
+        }
+
+        if (config('filesystems.default') === 's3') {
+            return Storage::temporaryUrl($this->signature_path, now()->addMinutes(15));
+        }
+
+        return Storage::url($this->signature_path);
     }
 
     /** Rótulo do tipo de assinatura para exibição */

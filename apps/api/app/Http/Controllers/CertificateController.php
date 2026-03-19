@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
+use App\Models\User;
 use App\Services\CertificateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,8 +17,7 @@ class CertificateController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $certificates = $request->user()
-            ->certificates()
+        $certificates = Certificate::whereIn('user_id', User::teamUserIds())
             ->select(['id', 'issuer', 'subject', 'serial_number', 'valid_from', 'valid_until', 'is_active', 'created_at'])
             ->latest()
             ->get();
@@ -28,7 +28,12 @@ class CertificateController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'pfx_file' => ['required', 'file', 'mimes:pfx,p12', 'max:5120'], // 5 MB
+            'pfx_file' => ['required', 'file', 'max:5120', function (string $attribute, mixed $value, \Closure $fail) {
+                $ext = strtolower($value->getClientOriginalExtension());
+                if (! in_array($ext, ['pfx', 'p12'])) {
+                    $fail('O certificado deve ser um arquivo .pfx ou .p12.');
+                }
+            }], // 5 MB
             'password' => ['required', 'string', 'min:1'],
         ]);
 
@@ -50,7 +55,7 @@ class CertificateController extends Controller
 
     public function destroy(Request $request, Certificate $certificate): JsonResponse
     {
-        abort_if($certificate->user_id !== $request->user()->id, 403);
+        abort_if(! in_array($certificate->user_id, User::teamUserIds()), 403);
 
         $certificate->update(['is_active' => false]);
 

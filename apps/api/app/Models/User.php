@@ -66,6 +66,22 @@ class User extends Authenticatable
     // Helpers
     // ---------------------------------------------------------------------------
 
+    /** IDs de todos os membros da equipe (conta compartilhada) */
+    public static function teamUserIds(): array
+    {
+        return static::pluck('id')->toArray();
+    }
+
+    /** Certificado A1 ativo de qualquer membro da equipe */
+    public static function teamActiveCertificate(): ?Certificate
+    {
+        return Certificate::whereIn('user_id', static::teamUserIds())
+            ->where('is_active', true)
+            ->where('valid_until', '>', now())
+            ->latest()
+            ->first();
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
